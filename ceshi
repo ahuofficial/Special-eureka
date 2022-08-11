@@ -1,0 +1,21 @@
+export CONFIG_NAME=egs/datasets/audio/lj/ds.yaml
+export MY_EXP_NAME=ds_exp
+mkdir -p data/raw/ljspeech
+cd data/raw
+wget https://data.keithito.com/data/speech/LJSpeech-1.1.tar.bz2
+bzip2 -d LJSpeech-1.1.tar.bz2
+tar -xvf LJSpeech-1.1.tar
+cd ../../
+# Preprocess step: text and unify the file structure.
+python data_gen/tts/runs/preprocess.py --config $CONFIG_NAME
+# Align step: MFA alignment.
+python data_gen/tts/runs/train_mfa_align.py --config $CONFIG_NAME
+# Binarization step: Binarize data for fast IO. You only need to rerun this line when running different task if you have `preprocess`ed and `align`ed the dataset before.
+python data_gen/tts/runs/binarize.py --config $CONFIG_NAME
+wget https://github.com/NATSpeech/NATSpeech/releases/download/pretrained_models/hifi_lj.zip
+unzip hifi_lj.zip
+mv hifi_lj checkpoints/hifi_lj
+export CONFIG_NAME=egs/datasets/audio/lj/hifigan.yaml  
+export MY_EXP_NAME=my_hifigan_exp
+python data_gen/tts/runs/binarize.py --config $CONFIG_NAME
+CUDA_VISIBLE_DEVICES=0 python tasks/run.py --config $CONFIG_NAME --exp_name $MY_EXP_NAME --reset
